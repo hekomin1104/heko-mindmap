@@ -1,4 +1,12 @@
 {
   "version": "1.0",
-  "maps": []
+  "maps": [
+    {
+      "id": "mnz33whjfnuvr",
+      "title": "notion管理",
+      "createdAt": "2026-04-14T20:39:00.919Z",
+      "updatedAt": "2026-04-14T20:39:00.919Z",
+      "filename": "data/map-mnz33whjfnuvr.json"
+    }
+  ]
 }
