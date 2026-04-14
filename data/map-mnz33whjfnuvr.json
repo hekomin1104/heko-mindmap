@@ -3,48 +3,91 @@
   "id": "mnz33whjfnuvr",
   "title": "notion管理",
   "createdAt": "2026-04-14T20:39:00.919Z",
-  "updatedAt": "2026-04-14T21:18:08.757Z",
+  "updatedAt": "2026-04-14T21:19:19.048Z",
   "viewport": {
-    "x": 0,
-    "y": 0,
-    "scale": 1
+    "x": 445,
+    "y": 13,
+    "scale": 0.65
   },
   "nodes": [
     {
       "id": "node-root",
       "label": "notion管理",
-      "x": 369,
-      "y": 221,
+      "x": 300,
+      "y": 400,
       "isRoot": true,
       "parentId": null,
       "childIds": [
         "mnz350k36qu2m"
       ],
       "color": "#4A90E2",
-      "textColor": "#ffffff"
+      "textColor": "#ffffff",
+      "collapsed": false
     },
     {
       "id": "mnz350k36qu2m",
       "label": "inbox",
-      "x": 551,
-      "y": 225,
+      "x": 520,
+      "y": 400,
       "isRoot": false,
       "parentId": "node-root",
       "childIds": [
-        "mnz45dbigozue"
+        "mnz45dbigozue",
+        "mnz4jluehpzsc"
       ],
       "color": "#7ED321",
-      "textColor": "#ffffff"
+      "textColor": "#ffffff",
+      "collapsed": false
     },
     {
       "id": "mnz45dbigozue",
       "label": "aaa",
-      "x": 786,
-      "y": 259,
+      "x": 740,
+      "y": 360,
+      "isRoot": false,
+      "parentId": "mnz350k36qu2m",
+      "childIds": [
+        "mnz4j2dmxwgsj",
+        "mnz4jgzvagtma"
+      ],
+      "color": "#E67E22",
+      "textColor": "#ffffff",
+      "collapsed": false
+    },
+    {
+      "id": "mnz4j2dmxwgsj",
+      "label": "hsh",
+      "x": 960,
+      "y": 320,
+      "isRoot": false,
+      "parentId": "mnz45dbigozue",
+      "childIds": [],
+      "collapsed": false,
+      "color": "#8E44AD",
+      "textColor": "#ffffff"
+    },
+    {
+      "id": "mnz4jgzvagtma",
+      "label": "jis",
+      "x": 960,
+      "y": 400,
+      "isRoot": false,
+      "parentId": "mnz45dbigozue",
+      "childIds": [],
+      "collapsed": false,
+      "color": "#8E44AD",
+      "textColor": "#ffffff"
+    },
+    {
+      "id": "mnz4jluehpzsc",
+      "label": "ndsah;",
+      "x": 740,
+      "y": 480,
       "isRoot": false,
       "parentId": "mnz350k36qu2m",
       "childIds": [],
-      "color": "#7ED321",
+      "collapsed": false,
+      "color": "#E67E22",
       "textColor": "#ffffff"
     }
   ]
