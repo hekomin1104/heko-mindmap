@@ -260,6 +260,7 @@ body {
   flex-direction: column;
   gap: 16px;
   background: #f0f4f8;
+  z-index: 200;
 }
 
 .setup-prompt p {

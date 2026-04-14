@@ -1,5 +1,7 @@
 /* base.css - リセット・変数・共通スタイル */
 
+.hidden { display: none !important; }
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
