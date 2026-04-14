@@ -3,7 +3,7 @@
   "id": "mnz33whjfnuvr",
   "title": "notion管理",
   "createdAt": "2026-04-14T20:39:00.919Z",
-  "updatedAt": "2026-04-14T20:40:06.809Z",
+  "updatedAt": "2026-04-14T21:18:08.757Z",
   "viewport": {
     "x": 0,
     "y": 0,
@@ -26,10 +26,23 @@
     {
       "id": "mnz350k36qu2m",
       "label": "inbox",
-      "x": 537,
-      "y": 217,
+      "x": 551,
+      "y": 225,
       "isRoot": false,
       "parentId": "node-root",
+      "childIds": [
+        "mnz45dbigozue"
+      ],
+      "color": "#7ED321",
+      "textColor": "#ffffff"
+    },
+    {
+      "id": "mnz45dbigozue",
+      "label": "aaa",
+      "x": 786,
+      "y": 259,
+      "isRoot": false,
+      "parentId": "mnz350k36qu2m",
       "childIds": [],
       "color": "#7ED321",
       "textColor": "#ffffff"
