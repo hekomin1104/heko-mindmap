@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "id": "mnz33whjfnuvr",
+  "title": "notion管理",
+  "createdAt": "2026-04-14T20:39:00.919Z",
+  "updatedAt": "2026-04-14T20:39:00.919Z",
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "scale": 1
+  },
+  "nodes": [
+    {
+      "id": "node-root",
+      "label": "notion管理",
+      "x": 600,
+      "y": 300,
+      "isRoot": true,
+      "parentId": null,
+      "childIds": [],
+      "color": "#4A90E2",
+      "textColor": "#ffffff"
+    }
+  ]
+}
