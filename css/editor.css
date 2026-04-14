@@ -48,6 +48,19 @@ body {
   display: none;
 }
 
+.btn-layout {
+  background: #f0f4f8;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  padding: 6px 14px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.btn-layout:hover {
+  background: var(--color-border);
+}
+
 .btn-save {
   background: var(--color-primary);
   color: #fff;
@@ -119,12 +132,24 @@ body {
 
 /* SVGノード */
 .node-group {
-  cursor: pointer;
+  cursor: grab;
+}
+
+.node-group:active {
+  cursor: grabbing;
 }
 
 .node-rect {
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
   rx: 8;
+  transition: filter 0.15s;
+}
+
+/* ドロップターゲットのハイライト */
+.node-rect.drop-target {
+  filter: drop-shadow(0 0 8px rgba(46,204,113,0.8));
+  stroke: #2ecc71;
+  stroke-width: 3;
 }
 
 .node-text {
@@ -156,6 +181,21 @@ body {
   dominant-baseline: middle;
   text-anchor: middle;
   pointer-events: none;
+}
+
+/* 折りたたみボタン */
+.collapse-btn {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.collapse-btn:hover {
+  opacity: 1;
+}
+
+.node-group:hover .collapse-btn {
+  opacity: 1;
 }
 
 /* 削除ボタン */

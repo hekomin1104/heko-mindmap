@@ -2,27 +2,31 @@
 
 import { getFile, putFile } from './github-api.js';
 import { isConfigured, getConfig } from './storage.js';
-import { addNode, removeNode, updateNodeLabel, updateNodePosition, updateMapInIndex } from './mindmap-data.js';
+import {
+  addNode, removeNode, updateNodeLabel, updateNodePosition,
+  reparentNode, toggleCollapse, autoLayout, updateMapInIndex,
+} from './mindmap-data.js';
 import { Renderer } from './renderer.js';
 import { DragController } from './drag-drop.js';
 
 // ---- DOM参照 ----
-const svgEl = document.getElementById('mindmap-svg');
-const titleEl = document.getElementById('map-title');
-const unsavedEl = document.getElementById('unsaved-indicator');
-const saveBtnEl = document.getElementById('save-btn');
+const svgEl        = document.getElementById('mindmap-svg');
+const titleEl      = document.getElementById('map-title');
+const unsavedEl    = document.getElementById('unsaved-indicator');
+const saveBtnEl    = document.getElementById('save-btn');
+const layoutBtnEl  = document.getElementById('btn-layout');
 const canvasLoading = document.getElementById('canvas-loading');
-const setupPrompt = document.getElementById('setup-prompt');
-const toastEl = document.getElementById('toast');
+const setupPrompt   = document.getElementById('setup-prompt');
+const toastEl       = document.getElementById('toast');
 
 // ---- 状態 ----
-let mapData = null;
-let mapSha = null;
+let mapData  = null;
+let mapSha   = null;
 let indexData = null;
-let indexSha = null;
-let unsaved = false;
+let indexSha  = null;
+let unsaved  = false;
 let renderer = null;
-let drag = null;
+let drag     = null;
 
 // ---- 初期化 ----
 async function init() {
@@ -34,13 +38,9 @@ async function init() {
 
   const params = new URLSearchParams(location.search);
   const mapId = params.get('id');
-  if (!mapId) {
-    location.href = 'index.html';
-    return;
-  }
+  if (!mapId) { location.href = 'index.html'; return; }
 
   try {
-    // index と map を並列取得
     const [idxResult, mapResult] = await Promise.all([
       getFile('data/index.json'),
       getFile(`data/map-${mapId}.json`),
@@ -52,31 +52,31 @@ async function init() {
       return;
     }
 
-    if (idxResult) {
-      indexData = idxResult.content;
-      indexSha = idxResult.sha;
-    }
-
+    if (idxResult) { indexData = idxResult.content; indexSha = idxResult.sha; }
     mapData = mapResult.content;
-    mapSha = mapResult.sha;
+    mapSha  = mapResult.sha;
+
+    // collapsed フィールドが古いデータにない場合の補完
+    for (const n of mapData.nodes) {
+      if (n.collapsed === undefined) n.collapsed = false;
+    }
 
     canvasLoading.classList.add('hidden');
     document.getElementById('canvas-container').classList.remove('hidden');
-
     titleEl.textContent = mapData.title;
 
     renderer = new Renderer(svgEl, {
-      onAddNode: handleAddNode,
-      onRemoveNode: handleRemoveNode,
-      onEditNode: handleEditNode,
-      onNodeMousedown: (e, nodeId) => drag.startNodeDrag(e, nodeId),
+      onAddNode:        handleAddNode,
+      onRemoveNode:     handleRemoveNode,
+      onEditNode:       handleEditNode,
+      onNodeMousedown:  (e, nodeId) => drag.startNodeDrag(e, nodeId),
+      onCollapseToggle: handleCollapseToggle,
     });
 
     drag = new DragController(svgEl, renderer, mapData, {
-      onNodeMoved: (id, x, y) => updateNodePosition(mapData, id, x, y),
-      onPanned: (x, y, s) => {
-        mapData.viewport = { x, y, scale: s };
-      },
+      onNodeMoved: (id, x, y) => { updateNodePosition(mapData, id, x, y); markUnsaved(); },
+      onReparent:  handleReparent,
+      onPanned:    (x, y, s) => { mapData.viewport = { x, y, scale: s }; },
       markUnsaved,
     });
 
@@ -91,10 +91,10 @@ async function init() {
 
 // ---- ノード操作 ----
 function handleAddNode(parentId) {
-  const label = promptInline('新しいノードのラベルを入力') || '新しいノード';
-  const node = addNode(mapData, parentId, label);
-  if (!node) return;
-  renderer.render(mapData);
+  const label = window.prompt('新しいノードのラベル', '新しいノード') ?? '';
+  if (label === '') return; // キャンセル
+  addNode(mapData, parentId, label.trim() || '新しいノード');
+  runAutoLayout();
   markUnsaved();
 }
 
@@ -111,6 +111,38 @@ function handleEditNode(nodeId, newLabel) {
   markUnsaved();
 }
 
+function handleReparent(nodeId, newParentId) {
+  const ok = reparentNode(mapData, nodeId, newParentId);
+  if (ok) {
+    runAutoLayout();
+    showToast('ノードを移動しました');
+    markUnsaved();
+  } else {
+    renderer.render(mapData);
+  }
+}
+
+function handleCollapseToggle(nodeId) {
+  toggleCollapse(mapData, nodeId);
+  renderer.render(mapData);
+  markUnsaved();
+}
+
+// ---- 自動レイアウト ----
+function runAutoLayout() {
+  autoLayout(mapData);
+  // ビューポートをリセットしてルートが見えるようにする
+  const root = mapData.nodes.find((n) => n.isRoot);
+  if (root) {
+    const rect = svgEl.getBoundingClientRect();
+    const nx = rect.width / 2 - root.x * renderer.scale;
+    const ny = rect.height / 2 - root.y * renderer.scale;
+    mapData.viewport = { x: nx, y: ny, scale: renderer.scale };
+  }
+  renderer.render(mapData);
+  drag.setMapData(mapData);
+}
+
 // ---- 保存 ----
 async function save() {
   if (!unsaved) return;
@@ -118,18 +150,15 @@ async function save() {
   saveBtnEl.textContent = '保存中…';
 
   try {
-    const now = new Date().toISOString();
-    mapData.updatedAt = now;
-
+    mapData.updatedAt = new Date().toISOString();
     const msg = `Update mindmap: ${mapData.title} (${new Date().toLocaleString('ja-JP')})`;
     const result = await putFile(`data/map-${mapData.id}.json`, mapData, mapSha, msg);
     mapSha = result.sha;
 
-    // index.json を更新
     if (indexData && indexSha) {
       updateMapInIndex(indexData, mapData);
-      const idxResult = await putFile('data/index.json', indexData, indexSha, `Update index: ${mapData.title}`);
-      indexSha = idxResult.sha;
+      const ir = await putFile('data/index.json', indexData, indexSha, `Update index: ${mapData.title}`);
+      indexSha = ir.sha;
     }
 
     markSaved();
@@ -144,24 +173,22 @@ async function save() {
 
 // ---- ズーム ----
 function bindZoom() {
-  const step = 0.15;
-  document.getElementById('zoom-in').addEventListener('click', () => applyZoom(step));
-  document.getElementById('zoom-out').addEventListener('click', () => applyZoom(-step));
+  const STEP = 0.15;
+  document.getElementById('zoom-in').addEventListener('click',    () => applyZoom(STEP));
+  document.getElementById('zoom-out').addEventListener('click',   () => applyZoom(-STEP));
   document.getElementById('zoom-reset').addEventListener('click', () => {
     renderer.setViewport(0, 0, 1.0);
     if (mapData) mapData.viewport = { x: 0, y: 0, scale: 1.0 };
   });
-
   svgEl.addEventListener('wheel', (e) => {
     e.preventDefault();
-    applyZoom(e.deltaY < 0 ? step : -step);
+    applyZoom(e.deltaY < 0 ? STEP : -STEP);
   }, { passive: false });
 }
 
 function applyZoom(delta) {
   const s = Math.max(0.2, Math.min(3.0, renderer.scale + delta));
   const rect = svgEl.getBoundingClientRect();
-  // ビューポート中央を基準にズーム
   const cx = rect.width / 2;
   const cy = rect.height / 2;
   const nx = cx - (cx - renderer.vx) * (s / renderer.scale);
@@ -179,20 +206,13 @@ function bindTitle() {
     titleEl.replaceWith(input);
     input.focus();
     input.select();
-
     const finish = () => {
-      const newTitle = input.value.trim() || mapData.title;
-      mapData.title = newTitle;
-      const root = mapData.nodes.find((n) => n.isRoot);
-      if (root && root.label === titleEl.textContent) {
-        updateNodeLabel(mapData, root.id, newTitle);
-        renderer.render(mapData);
-      }
-      titleEl.textContent = newTitle;
+      const t = input.value.trim() || mapData.title;
+      mapData.title = t;
+      titleEl.textContent = t;
       input.replaceWith(titleEl);
       markUnsaved();
     };
-
     input.addEventListener('blur', finish);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') input.blur();
@@ -201,16 +221,9 @@ function bindTitle() {
   });
 }
 
-// ---- UI ヘルパー ----
-function markUnsaved() {
-  unsaved = true;
-  unsavedEl.classList.remove('hidden');
-}
-
-function markSaved() {
-  unsaved = false;
-  unsavedEl.classList.add('hidden');
-}
+// ---- UI ----
+function markUnsaved() { unsaved = true; unsavedEl.classList.remove('hidden'); }
+function markSaved()   { unsaved = false; unsavedEl.classList.add('hidden'); }
 
 function showToast(msg, type = '') {
   toastEl.textContent = msg;
@@ -218,24 +231,10 @@ function showToast(msg, type = '') {
   setTimeout(() => { toastEl.className = type; }, 2500);
 }
 
-// インラインプロンプトの代わりにカスタムダイアログを使用（iframe対応）
-function promptInline(message) {
-  return window.prompt(message);
-}
-
-// ---- イベントバインド ----
+// ---- イベント ----
 saveBtnEl.addEventListener('click', save);
-
-document.getElementById('btn-open-tab').addEventListener('click', () => {
-  window.open(location.href, '_blank');
-});
-
-// 未保存警告（Notion iframeではbeforeunloadが効かない場合あり）
-window.addEventListener('beforeunload', (e) => {
-  if (unsaved) {
-    e.preventDefault();
-    e.returnValue = '';
-  }
-});
+layoutBtnEl.addEventListener('click', () => { runAutoLayout(); markUnsaved(); });
+document.getElementById('btn-open-tab').addEventListener('click', () => window.open(location.href, '_blank'));
+window.addEventListener('beforeunload', (e) => { if (unsaved) { e.preventDefault(); e.returnValue = ''; } });
 
 init();

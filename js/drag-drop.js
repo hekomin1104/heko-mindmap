@@ -1,11 +1,16 @@
-// drag-drop.js - ドラッグ&ドロップ（ノード移動・パン）
+// drag-drop.js - ドラッグ&ドロップ（ノード移動・パン・再接続）
+
+import { isDescendant } from './mindmap-data.js';
+
+const SNAP_DISTANCE = 120; // キャンバス座標でのスナップ距離
 
 export class DragController {
-  constructor(svgEl, renderer, mapData, { onNodeMoved, onPanned, markUnsaved }) {
+  constructor(svgEl, renderer, mapData, { onNodeMoved, onReparent, onPanned, markUnsaved }) {
     this.svg = svgEl;
     this.renderer = renderer;
     this.mapData = mapData;
     this.onNodeMoved = onNodeMoved;
+    this.onReparent = onReparent;
     this.onPanned = onPanned;
     this.markUnsaved = markUnsaved;
 
@@ -14,11 +19,11 @@ export class DragController {
     this.isPanning = false;
     this.panStart = { x: 0, y: 0 };
     this.panOrigin = { x: 0, y: 0 };
+    this._currentDropTarget = null;
 
     this._bindEvents();
   }
 
-  // mapData の参照を更新（マップ再読み込み時）
   setMapData(mapData) {
     this.mapData = mapData;
   }
@@ -30,22 +35,21 @@ export class DragController {
     const pos = this.renderer.clientToCanvas(e.clientX, e.clientY);
     const node = this.mapData.nodes.find((n) => n.id === nodeId);
     this.dragOffset = { x: pos.x - node.x, y: pos.y - node.y };
+    this._currentDropTarget = null;
 
     this.svg.parentElement.classList.add('grabbing');
   }
 
   _bindEvents() {
-    // パン開始（SVG背景のみ）
+    // パン開始（背景クリック）
     this.svg.addEventListener('mousedown', (e) => {
-      if (e.target !== this.svg && !e.target.closest('#canvas-container > svg')) return;
-      if (e.target.closest('.node-group, .add-btn, .del-btn')) return;
+      if (e.target.closest('.node-group,.add-btn,.del-btn,.collapse-btn')) return;
       this.isPanning = true;
       this.panStart = { x: e.clientX, y: e.clientY };
       this.panOrigin = { x: this.renderer.vx, y: this.renderer.vy };
       this.svg.parentElement.classList.add('grabbing');
     });
 
-    // タッチパン
     this.svg.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;
       if (e.target.closest('.node-group')) return;
@@ -55,32 +59,32 @@ export class DragController {
       this.panOrigin = { x: this.renderer.vx, y: this.renderer.vy };
     }, { passive: true });
 
-    // 移動
     document.addEventListener('mousemove', (e) => {
-      if (this.draggingNodeId) {
-        this._handleNodeMove(e.clientX, e.clientY);
-      } else if (this.isPanning) {
-        this._handlePan(e.clientX, e.clientY);
-      }
+      if (this.draggingNodeId) this._handleNodeMove(e.clientX, e.clientY);
+      else if (this.isPanning) this._handlePan(e.clientX, e.clientY);
     });
 
     document.addEventListener('touchmove', (e) => {
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
-      if (this.draggingNodeId) {
-        e.preventDefault();
-        this._handleNodeMove(t.clientX, t.clientY);
-      } else if (this.isPanning) {
-        this._handlePan(t.clientX, t.clientY);
-      }
+      if (this.draggingNodeId) { e.preventDefault(); this._handleNodeMove(t.clientX, t.clientY); }
+      else if (this.isPanning) this._handlePan(t.clientX, t.clientY);
     }, { passive: false });
 
-    // 終了
     const endDrag = () => {
       if (this.draggingNodeId) {
-        const node = this.mapData.nodes.find((n) => n.id === this.draggingNodeId);
-        if (node) this.onNodeMoved(node.id, node.x, node.y);
-        this.markUnsaved();
+        const dropTarget = this._currentDropTarget;
+        if (dropTarget) {
+          // 再接続
+          this.renderer.clearDropHighlight();
+          this.onReparent(this.draggingNodeId, dropTarget.id);
+        } else {
+          // 位置のみ更新
+          const node = this.mapData.nodes.find((n) => n.id === this.draggingNodeId);
+          if (node) this.onNodeMoved(node.id, node.x, node.y);
+          this.markUnsaved();
+        }
+        this._currentDropTarget = null;
       }
       this.draggingNodeId = null;
       this.isPanning = false;
@@ -99,17 +103,44 @@ export class DragController {
     node.x = pos.x - this.dragOffset.x;
     node.y = pos.y - this.dragOffset.y;
 
-    // DOM更新（高速パス）
     this.renderer.moveNodeEl(this.draggingNodeId, node.x, node.y);
     this.renderer.updateEdgesFor(this.draggingNodeId, this.mapData);
+
+    // スナップ対象を探す
+    const target = this._findDropTarget(node);
+    if (target?.id !== this._currentDropTarget?.id) {
+      this._currentDropTarget = target;
+      this.renderer.highlightDropTarget(target ? target.id : null);
+    }
   }
 
   _handlePan(clientX, clientY) {
-    const dx = clientX - this.panStart.x;
-    const dy = clientY - this.panStart.y;
-    const nx = this.panOrigin.x + dx;
-    const ny = this.panOrigin.y + dy;
+    const nx = this.panOrigin.x + (clientX - this.panStart.x);
+    const ny = this.panOrigin.y + (clientY - this.panStart.y);
     this.renderer.setViewport(nx, ny, this.renderer.scale);
     this.onPanned(nx, ny, this.renderer.scale);
+  }
+
+  // ドロップ先候補ノードを探す（SNAP_DISTANCE 以内で最も近いもの）
+  _findDropTarget(draggingNode) {
+    let closest = null;
+    let closestDist = SNAP_DISTANCE;
+
+    for (const node of this.mapData.nodes) {
+      if (node.id === draggingNode.id) continue;
+      // 自分の子孫には接続できない（循環防止）
+      if (isDescendant(this.mapData, node.id, draggingNode.id)) continue;
+
+      const dx = node.x - draggingNode.x;
+      const dy = node.y - draggingNode.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = node;
+      }
+    }
+
+    return closest;
   }
 }
