@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>マインドマップ エディタ</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/editor.css" />
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header class="editor-header">
+    <a href="index.html" class="btn-back">← 一覧</a>
+    <span class="editor-header__title" id="map-title">読み込み中…</span>
+    <span class="unsaved-indicator hidden" id="unsaved-indicator">● 未保存</span>
+    <button class="btn btn-layout" id="btn-layout" title="ノードを自動整列">整列</button>
+    <button class="btn btn-save" id="save-btn">保存</button>
+    <button class="btn btn-open-tab" id="btn-open-tab" title="別タブで開く">↗</button>
+  </header>
+
+  <!-- ローディング -->
+  <div class="canvas-loading" id="canvas-loading">読み込み中…</div>
+
+  <!-- セットアップ未完了 -->
+  <div class="setup-prompt hidden" id="setup-prompt">
+    <p>GitHubの設定が完了していません。</p>
+    <a href="setup.html" class="btn btn-primary btn-save">セットアップへ</a>
+  </div>
+
+  <!-- キャンバス -->
+  <div id="canvas-container" class="hidden">
+    <svg id="mindmap-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <!-- ズームコントロール -->
+  <div class="zoom-controls">
+    <button id="zoom-in"    title="拡大">＋</button>
+    <button id="zoom-reset" title="リセット">⊙</button>
+    <button id="zoom-out"   title="縮小">－</button>
+  </div>
+
+  <!-- 操作ガイド -->
+  <div class="legend">
+    <div>ドラッグ: ノード移動</div>
+    <div>他ノードに近づける: 子として接続</div>
+    <div>＋: 子ノード追加 / ×: 削除</div>
+    <div>▾: 折りたたみ / ダブルクリック: 編集</div>
+    <div>背景ドラッグ: 移動 / ホイール: ズーム</div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="module" src="js/editor.js"></script>
+</body>
+</html>
