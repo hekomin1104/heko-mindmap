@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>マインドマップ一覧</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/list.css" />
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header class="page-header">
+    <h1>🗺 マインドマップ</h1>
+    <div class="header-actions">
+      <button class="btn btn-settings" id="btn-settings">設定</button>
+      <button class="btn btn-new" id="btn-new-map">＋ 新規作成</button>
+    </div>
+  </header>
+
+  <!-- コンテンツ -->
+  <main class="main-content">
+    <p class="section-title">マイマップ</p>
+    <div id="loading" class="loading">読み込み中…</div>
+    <div id="map-grid" class="map-grid"></div>
+  </main>
+
+  <!-- 新規作成ダイアログ -->
+  <div class="dialog-overlay hidden" id="new-map-dialog">
+    <div class="dialog">
+      <h2>新しいマインドマップ</h2>
+      <input type="text" id="new-map-title" placeholder="タイトルを入力" maxlength="60" />
+      <div class="dialog-actions" style="margin-top:16px">
+        <button class="btn btn-ghost" id="btn-create-cancel">キャンセル</button>
+        <button class="btn btn-primary" id="btn-create-confirm">作成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 削除確認ダイアログ -->
+  <div class="dialog-overlay hidden" id="delete-dialog">
+    <div class="dialog">
+      <h2>削除の確認</h2>
+      <p>「<span id="delete-map-name"></span>」を削除しますか？<br>この操作は取り消せません。</p>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" id="btn-delete-cancel">キャンセル</button>
+        <button class="btn btn-danger" id="btn-delete-confirm">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="module" src="js/list.js"></script>
+</body>
+</html>
